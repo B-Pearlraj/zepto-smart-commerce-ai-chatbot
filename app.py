@@ -12,7 +12,7 @@ from api_client import APIClient
 
 st.set_page_config(
     page_title="Zepto Smart Commerce AI",
-    page_icon="🛵",
+    page_icon="Logo-PTS.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -613,7 +613,10 @@ with st.sidebar:
         reset_chat()
         st.rerun()
 
-
+st.markdown(
+    "<div style='text-align:center;'>Created by <b>Pearlraj</b></div>",
+    unsafe_allow_html=True
+)
 # ============================================================
 # HEADER (always visible)
 # ============================================================
@@ -688,3 +691,5 @@ if prompt:
     st.session_state.messages.append({"role": "assistant", "content": outcome})
 
     st.rerun()
+
+
