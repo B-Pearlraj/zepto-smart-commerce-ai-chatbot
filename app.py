@@ -108,31 +108,12 @@ st.markdown(
     f"""
     <style>
 
-    /* Keep the header so the sidebar-collapse arrow (top-left) and the
-       ☰ menu (Settings → Theme, for switching Light/Dark) stay usable.
-       Only hide the "Made with Streamlit" footer and the Deploy button. */
-    footer {{visibility: hidden;}}
-    div[data-testid="stToolbarActions"] {{display: none;}}
-    header[data-testid="stHeader"] {{
-        background: transparent;
-    }}
+    #MainMenu, footer, header {{visibility: hidden;}}
 
     .stApp {{
         background: #FAF8FD;
         color: {ZEPTO_INK};
         font-family: "Poppins", "Segoe UI", sans-serif;
-    }}
-
-    /* The fixed bottom bar Streamlit wraps the chat input in defaults to
-       the theme's base background; pin it to match our light theme so it
-       doesn't show up as a stray black strip behind the input box. */
-    div[data-testid="stBottom"] > div {{
-        background: #FAF8FD;
-    }}
-
-    div[data-testid="stBottomBlockContainer"] {{
-        background: #FAF8FD;
-        padding-top: 8px;
     }}
 
     h1, h2, h3, .brand-title, .welcome-title {{
@@ -302,12 +283,8 @@ st.markdown(
     .diff-new {{ color: {ZEPTO_GREEN}; font-weight: 700; }}
 
     div[data-testid="stChatInput"] {{
-        background: #FFFFFF;
         border: 1px solid #EFE6FC;
         border-radius: 999px;
-        box-shadow: 0 2px 10px rgba(139, 47, 248, 0.06);
-        max-width: 900px;
-        margin: 0 auto;
     }}
 
     div[data-testid="stChatInput"] textarea {{
@@ -315,18 +292,9 @@ st.markdown(
         color: {ZEPTO_INK} !important;
     }}
 
-    div[data-testid="stChatInput"] textarea::placeholder {{
-        color: #A79BB3 !important;
-        opacity: 1 !important;
-    }}
-
     .stButton > button[kind="primary"], button[data-testid="stChatInputSubmitButton"] {{
         background: {ZEPTO_PURPLE} !important;
         border-color: {ZEPTO_PURPLE} !important;
-    }}
-
-    button[data-testid="stChatInputSubmitButton"] svg {{
-        fill: #FFFFFF !important;
     }}
 
     </style>
