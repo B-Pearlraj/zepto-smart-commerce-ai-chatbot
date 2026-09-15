@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 
 import streamlit as st
 
@@ -14,7 +15,7 @@ st.set_page_config(
     page_title="Zepto Smart Commerce AI",
     page_icon="🛵",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 
@@ -31,63 +32,210 @@ api = APIClient(API_BASE_URL)
 
 
 # ============================================================
-# CUSTOM CSS
+# FIELD DEFAULTS  (used to fill in anything the user omits)
+# ============================================================
+
+DEFAULT_PAYLOAD = {
+    "city": "Chennai",
+    "city_tier": 1,
+    "customer_lat": 13.0827,
+    "customer_lon": 80.2707,
+    "store_id": "DS001",
+    "store_lat": 13.0800,
+    "store_lon": 80.2700,
+    "delivery_zone": "urban",
+    "distance_km": 1.8,
+    "distance_band": "0-2",
+    "distance_to_radius_ratio": 0.18,
+    "service_radius_km": 10.0,
+    "within_service_radius": 1,
+    "item_count": 5,
+    "order_amount": 450.0,
+    "order_amount_band": "medium",
+    "order_weight_kg": 2.0,
+    "order_amount_per_kg": 225.0,
+    "order_year": 2026,
+    "order_month": 9,
+    "order_day": 10,
+    "order_hour": 18,
+    "order_dayofweek": 3,
+    "is_month_start": 0,
+    "is_month_end": 0,
+    "is_peak_hour": 0,
+    "is_weekend": 0,
+    "time_of_day": "evening",
+    "weather_condition": "clear",
+    "weather_severity": 0,
+    "rainfall_mm": 0.0,
+    "has_rain": 0,
+    "traffic_index": 30.0,
+    "traffic_level": "low",
+    "road_type": "main_road",
+    "current_rider_load": 2.0,
+    "previous_acceptance_rate": 0.85,
+    "rider_earnings_today": 850.0,
+    "rider_experience_months": 24.0,
+    "rider_experience_band": "experienced",
+    "rider_rating": 4.7,
+    "rider_rating_band": "high",
+    "vehicle_type": "bike",
+    "current_incentive": 20.0,
+    "membership_type": "pass_plus",
+    "historical_delivery_cost": 48.0,
+    "historical_travel_time": 18.0,
+    "demand_level": "medium",
+    "festival_day_flag": 0,
+}
+
+EXAMPLE_BLOCK = "\n".join(
+    f"{k}: {v}" for k, v in DEFAULT_PAYLOAD.items()
+)
+
+
+# ============================================================
+# CUSTOM CSS  —  dark chatbot theme
 # ============================================================
 
 st.markdown(
     """
     <style>
 
-    .main-title {
+    #MainMenu, footer, header {visibility: hidden;}
+
+    .stApp {
+        background: radial-gradient(circle at 20% 0%, #10192b 0%, #060a13 55%, #04070d 100%);
+        color: #e7ecf5;
+    }
+
+    section[data-testid="stSidebar"] {
+        background: #0a1120;
+        border-right: 1px solid #1c2740;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button {
+        width: 100%;
+        background: #101c33;
+        color: #dbe4f5;
+        border: 1px solid #22314f;
+        border-radius: 10px;
+        font-weight: 600;
+        text-align: left;
+        padding: 10px 14px;
+    }
+
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        border-color: #6d5bd0;
+        color: #ffffff;
+    }
+
+    .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 4px;
+    }
+
+    .brand-circle {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: conic-gradient(from 180deg, #16c79a, #2696ff, #7b5cff, #16c79a);
+        flex-shrink: 0;
+    }
+
+    .brand-circle.lg {
+        width: 76px;
+        height: 76px;
+        margin: 0 auto 18px auto;
+    }
+
+    .brand-title {
+        font-size: 18px;
+        font-weight: 750;
+        color: #f2f5fb;
+        margin: 0;
+    }
+
+    .brand-sub {
+        font-size: 12.5px;
+        color: #8a97b3;
+        margin: 0;
+    }
+
+    .welcome-wrap {
         text-align: center;
-        font-size: 36px;
-        font-weight: 700;
-        margin-top: 10px;
-        margin-bottom: 5px;
+        margin-top: 8vh;
     }
 
-    .subtitle {
+    .welcome-title {
+        font-size: 26px;
+        font-weight: 750;
+        color: #f2f5fb;
+        margin-bottom: 6px;
+    }
+
+    .welcome-sub {
+        font-size: 15px;
+        color: #8a97b3;
+        max-width: 560px;
+        margin: 0 auto;
+    }
+
+    .example-box {
+        background: #0d1626;
+        border: 1px solid #1e2b47;
+        border-radius: 12px;
+        padding: 14px 16px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12.5px;
+        color: #93a2c2;
+        max-height: 210px;
+        overflow-y: auto;
+        text-align: left;
+        margin-top: 22px;
+    }
+
+    div[data-testid="stChatMessage"] {
+        background: #0d1626;
+        border: 1px solid #1c2740;
+        border-radius: 14px;
+        padding: 4px 6px;
+    }
+
+    .result-card {
+        background: #101c33;
+        border: 1px solid #22314f;
+        border-radius: 12px;
+        padding: 14px 16px;
         text-align: center;
-        color: #666666;
-        font-size: 17px;
-        margin-bottom: 30px;
     }
 
-    .section-title {
-        font-size: 22px;
+    .result-label {
+        color: #8a97b3;
+        font-size: 12.5px;
+        margin-bottom: 4px;
+    }
+
+    .result-value {
+        color: #f2f5fb;
+        font-size: 21px;
+        font-weight: 750;
+    }
+
+    .pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
         font-weight: 650;
-        margin-top: 10px;
-        margin-bottom: 10px;
     }
 
-    .prediction-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 22px;
-        min-height: 145px;
-    }
+    .pill-ok { background: rgba(22,199,154,0.15); color: #16c79a; }
+    .pill-warn { background: rgba(255,176,32,0.15); color: #ffb020; }
 
-    .prediction-label {
-        color: #666666;
-        font-size: 14px;
-        margin-bottom: 5px;
-    }
-
-    .prediction-value {
-        font-size: 30px;
-        font-weight: 700;
-    }
-
-    .live-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 18px;
-    }
-
-    .stButton > button {
-        font-weight: 650;
+    div[data-testid="stChatInput"] textarea {
+        background: #0d1626 !important;
+        color: #e7ecf5 !important;
     }
 
     </style>
@@ -100,85 +248,171 @@ st.markdown(
 # HELPER FUNCTIONS
 # ============================================================
 
-def distance_band(distance):
-    if distance <= 2:
-        return "0-2"
-    elif distance <= 5:
-        return "2-5"
-    elif distance <= 10:
-        return "5-10"
-    elif distance <= 20:
-        return "10-20"
-    return "20+"
+def coerce_value(raw: str):
+    raw = raw.strip()
+    if re.fullmatch(r"-?\d+", raw):
+        return int(raw)
+    try:
+        return float(raw)
+    except ValueError:
+        return raw
 
 
-def amount_band(amount):
-    if amount < 300:
-        return "low"
-    elif amount <= 1000:
-        return "medium"
-    return "high"
+def parse_feature_block(text: str) -> dict:
+    parsed = {}
+    for line in text.strip().splitlines():
+        line = line.strip()
+        if not line or ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        key = key.strip()
+        if key in DEFAULT_PAYLOAD:
+            parsed[key] = coerce_value(value)
+    return parsed
 
 
-def experience_band(months):
-    if months < 3:
-        return "new"
-    elif months < 12:
-        return "beginner"
-    elif months < 24:
-        return "intermediate"
-    return "experienced"
-
-
-def rating_band(rating):
-    if rating < 3:
-        return "low"
-    elif rating < 4:
-        return "medium"
-    return "high"
-
-
-def time_of_day(hour):
-    if 5 <= hour < 12:
-        return "morning"
-    elif 12 <= hour < 17:
-        return "afternoon"
-    elif 17 <= hour < 21:
-        return "evening"
-    return "night"
-
-
-def is_peak_hour(hour):
-    return int(
-        hour in [8, 9, 10, 18, 19, 20, 21]
-    )
+def build_payload(parsed: dict) -> dict:
+    payload = dict(DEFAULT_PAYLOAD)
+    payload.update(parsed)
+    return payload
 
 
 def format_optional(value):
-    if value is None:
-        return "N/A"
-    return str(value)
+    return "N/A" if value is None else str(value)
 
 
-def reset_prediction():
-    st.session_state.prediction = None
+def render_prediction_message(payload: dict, result: dict):
+    """Renders the assistant's chat-bubble style prediction output."""
+
+    missing = [k for k in DEFAULT_PAYLOAD if k not in payload]
+
+    st.markdown(
+        f"Here's the prediction for **{payload.get('city', 'the order')}** "
+        f"(store `{payload.get('store_id', 'N/A')}`), based on the "
+        f"{len(payload) - len(missing) if missing else len(DEFAULT_PAYLOAD)} "
+        "features you provided:"
+    )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.markdown(
+            '<div class="result-card">'
+            '<div class="result-label">💰 Delivery Charge</div>'
+            f'<div class="result-value">₹{result["delivery_charge"]:.2f}</div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    with c2:
+        st.markdown(
+            '<div class="result-card">'
+            '<div class="result-label">⏱️ Estimated Delivery Time</div>'
+            f'<div class="result-value">{result["delivery_time_minutes"]:.1f} min</div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    with c3:
+        probability = float(result["rider_acceptance_probability"])
+        st.markdown(
+            '<div class="result-card">'
+            '<div class="result-label">🛵 Rider Acceptance</div>'
+            f'<div class="result-value">{probability * 100:.1f}%</div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("")
+
+    if result.get("rider_acceptance") == 1:
+        st.markdown(
+            '<span class="pill pill-ok">✅ Rider predicted to ACCEPT</span>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<span class="pill pill-warn">⚠️ Rider predicted NOT to accept</span>',
+            unsafe_allow_html=True,
+        )
+
+    weather = result.get("weather", {})
+    traffic = result.get("traffic", {})
+
+    with st.expander("🌤️ Weather & 🚦 traffic used for this prediction"):
+
+        wc1, wc2, wc3, wc4 = st.columns(4)
+
+        with wc1:
+            st.metric("Condition", format_optional(weather.get("description")))
+        with wc2:
+            temperature = weather.get("temperature_c")
+            st.metric(
+                "Temperature",
+                f"{temperature:.1f} °C" if temperature is not None else "N/A",
+            )
+        with wc3:
+            humidity = weather.get("humidity_percent")
+            st.metric(
+                "Humidity",
+                f"{humidity:.0f}%" if humidity is not None else "N/A",
+            )
+        with wc4:
+            st.metric("Rainfall", f"{weather.get('rainfall_mm', 0):.1f} mm")
+
+        tc1, tc2, tc3 = st.columns(3)
+
+        with tc1:
+            st.metric("Traffic Level", format_optional(traffic.get("traffic_level")))
+        with tc2:
+            st.metric("Traffic Index", f"{traffic.get('traffic_index', 0):.1f}")
+        with tc3:
+            st.metric("Current Speed", f"{traffic.get('current_speed_kmh', 0):.1f} km/h")
+
+    if missing:
+        st.caption(
+            "ℹ️ Defaulted "
+            + ", ".join(f"`{m}`" for m in missing)
+            + " since they weren't in your message."
+        )
+
+    st.caption(
+        f"Model: **{result.get('model_version', 'HGB-v1')}** • "
+        "Live weather/traffic applied server-side • logged to PostgreSQL."
+    )
+
+
+def run_prediction(user_text: str):
+    """Parses the pasted feature block, calls the API, and returns a
+    dict describing what to render for the assistant turn."""
+
+    parsed = parse_feature_block(user_text)
+
+    if not parsed:
+        return {
+            "error": (
+                "I couldn't find any `key: value` feature lines in that "
+                "message. Paste your order features one per line, e.g.\n\n"
+                "```\ncity: Chennai\ndistance_km: 1.8\norder_amount: 450.0\n...\n```"
+            )
+        }
+
+    payload = build_payload(parsed)
+
+    try:
+        result = api.predict(payload)
+    except Exception as exc:
+        return {"error": f"Prediction failed: {exc}"}
+
+    return {"payload": payload, "result": result}
 
 
 # ============================================================
-# HEADER
+# SESSION STATE
 # ============================================================
 
-st.markdown(
-    '<div class="main-title">🛵 Zepto Smart Commerce AI</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    '<div class="subtitle">'
-    "AI-powered Delivery Charge, ETA & Rider Acceptance Prediction"
-    "</div>",
-    unsafe_allow_html=True,
-)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 
 # ============================================================
@@ -187,1052 +421,127 @@ st.markdown(
 
 with st.sidebar:
 
-    st.header("⚙️ System Status")
-
-    try:
-
-        health = api.health_check()
-
-        st.success("FastAPI Connected")
-
-        st.write(
-            f"**Model:** "
-            f"{health.get('model_version', 'N/A')}"
-        )
-
-        st.write(
-            f"**Weather:** "
-            f"{health.get('weather_provider', 'N/A')}"
-        )
-
-        st.write(
-            f"**Traffic:** "
-            f"{health.get('traffic_provider', 'N/A')}"
-        )
-
-        st.divider()
-
-        st.caption(
-            "Weather and traffic are automatically "
-            "obtained by the FastAPI backend."
-        )
-
-    except Exception as exc:
-
-        st.error("FastAPI is not connected.")
-
-        st.caption(str(exc))
-
-
-# ============================================================
-# PREDICTION FORM
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">'
-    "📦 Customer & Delivery"
-    "</div>",
-    unsafe_allow_html=True,
-)
-
-with st.container(border=True):
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        city = st.text_input(
-            "City",
-            value="Chennai",
-        )
-
-    with c2:
-
-        city_tier = st.selectbox(
-            "City Tier",
-            [1, 2, 3],
-            index=0,
-        )
-
-    with c3:
-
-        delivery_zone = st.selectbox(
-            "Delivery Zone",
-            [
-                "urban",
-                "suburban",
-                "rural",
-            ],
-        )
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-
-        st.markdown("**Customer Location**")
-
-        customer_lat = st.number_input(
-            "Customer Latitude",
-            min_value=-90.0,
-            max_value=90.0,
-            value=13.0827,
-            format="%.6f",
-        )
-
-    with c2:
-
-        st.markdown("**Customer Location**")
-
-        customer_lon = st.number_input(
-            "Customer Longitude",
-            min_value=-180.0,
-            max_value=180.0,
-            value=80.2707,
-            format="%.6f",
-        )
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        distance_km = st.number_input(
-            "Delivery Distance (km)",
-            min_value=0.0,
-            value=1.8,
-            format="%.2f",
-        )
-
-    with c2:
-
-        service_radius_km = st.number_input(
-            "Service Radius (km)",
-            min_value=0.1,
-            value=10.0,
-            format="%.2f",
-        )
-
-    with c3:
-
-        within_radius = st.selectbox(
-            "Within Service Radius?",
-            ["Yes", "No"],
-        )
-
-
-# ============================================================
-# STORE & ORDER
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">'
-    "🏪 Store & Order"
-    "</div>",
-    unsafe_allow_html=True,
-)
-
-with st.container(border=True):
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        store_id = st.text_input(
-            "Store ID",
-            value="DS001",
-        )
-
-    with c2:
-
-        store_lat = st.number_input(
-            "Store Latitude",
-            min_value=-90.0,
-            max_value=90.0,
-            value=13.0800,
-            format="%.6f",
-        )
-
-    with c3:
-
-        store_lon = st.number_input(
-            "Store Longitude",
-            min_value=-180.0,
-            max_value=180.0,
-            value=80.2700,
-            format="%.6f",
-        )
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        item_count = st.number_input(
-            "Item Count",
-            min_value=0,
-            value=5,
-            step=1,
-        )
-
-    with c2:
-
-        order_amount = st.number_input(
-            "Order Amount (₹)",
-            min_value=0.0,
-            value=450.0,
-            format="%.2f",
-        )
-
-    with c3:
-
-        order_weight = st.number_input(
-            "Order Weight (kg)",
-            min_value=0.01,
-            value=2.0,
-            format="%.2f",
-        )
-
-
-# ============================================================
-# RIDER DETAILS
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">'
-    "🛵 Rider Details"
-    "</div>",
-    unsafe_allow_html=True,
-)
-
-with st.container(border=True):
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-
-        rider_experience = st.number_input(
-            "Experience (months)",
-            min_value=0.0,
-            value=24.0,
-            format="%.1f",
-        )
-
-    with c2:
-
-        rider_rating = st.number_input(
-            "Rider Rating",
-            min_value=0.0,
-            max_value=5.0,
-            value=4.7,
-            format="%.1f",
-        )
-
-    with c3:
-
-        vehicle_type = st.selectbox(
-            "Vehicle Type",
-            [
-                "bike",
-                "scooter",
-                "ev_bike",
-                "bicycle",
-            ],
-        )
-
-    with c4:
-
-        current_rider_load = st.number_input(
-            "Current Rider Load",
-            min_value=0.0,
-            value=2.0,
-            format="%.1f",
-        )
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        previous_acceptance_rate = st.number_input(
-            "Previous Acceptance Rate",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.85,
-            format="%.2f",
-        )
-
-    with c2:
-
-        rider_earnings_today = st.number_input(
-            "Today's Rider Earnings (₹)",
-            min_value=0.0,
-            value=850.0,
-            format="%.2f",
-        )
-
-    with c3:
-
-        current_incentive = st.number_input(
-            "Current Incentive (₹)",
-            min_value=0.0,
-            value=20.0,
-            format="%.2f",
-        )
-
-
-# ============================================================
-# ORDER CONTEXT
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">'
-    "📅 Order Context"
-    "</div>",
-    unsafe_allow_html=True,
-)
-
-with st.container(border=True):
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-
-        order_date = st.date_input(
-            "Order Date",
-            value=datetime.date(2026, 9, 8),
-        )
-
-    with c2:
-
-        order_hour = st.number_input(
-            "Order Hour (0–23)",
-            min_value=0,
-            max_value=23,
-            value=14,
-            step=1,
-        )
-
-    with c3:
-
-        road_type = st.selectbox(
-            "Road Type",
-            [
-                "main_road",
-                "side_road",
-                "residential",
-                "highway",
-                "service_road",
-            ],
-        )
-
-    with c4:
-
-        membership_type = st.selectbox(
-            "Membership",
-            [
-                "regular",
-                "pass",
-                "pass_plus",
-            ],
-        )
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        demand_level = st.selectbox(
-            "Demand Level",
-            [
-                "low",
-                "medium",
-                "high",
-            ],
-            index=1,
-        )
-
-    with c2:
-
-        festival_day = st.selectbox(
-            "Festival Day",
-            [
-                "No",
-                "Yes",
-            ],
-        )
-
-    with c3:
-
-        historical_delivery_cost = st.number_input(
-            "Historical Delivery Cost (₹)",
-            min_value=0.0,
-            value=48.0,
-            format="%.2f",
-        )
-
-    historical_travel_time = st.number_input(
-        "Historical Travel Time (minutes)",
-        min_value=0.0,
-        value=18.0,
-        format="%.2f",
-    )
-
-
-# ============================================================
-# LIVE DATA NOTICE
-# ============================================================
-
-st.info(
-    "🌤️ **Weather:** Automatically fetched LIVE from OpenWeather  "
-    "  🚦 **Traffic:** Automatically fetched LIVE from TomTom"
-)
-
-
-# ============================================================
-# PREDICT BUTTON
-# ============================================================
-
-st.markdown("")
-
-predict_button = st.button(
-    "🚀 PREDICT DELIVERY",
-    type="primary",
-    use_container_width=True,
-)
-
-
-# ============================================================
-# PREDICTION
-# ============================================================
-
-if predict_button:
-
-    try:
-
-        # ----------------------------------------------------
-        # VALIDATION
-        # ----------------------------------------------------
-
-        if not city.strip():
-
-            st.error(
-                "Please enter a city."
-            )
-
-            st.stop()
-
-        if not store_id.strip():
-
-            st.error(
-                "Please enter a store ID."
-            )
-
-            st.stop()
-
-        if distance_km < 0:
-
-            st.error(
-                "Delivery distance cannot be negative."
-            )
-
-            st.stop()
-
-        if service_radius_km <= 0:
-
-            st.error(
-                "Service radius must be greater than zero."
-            )
-
-            st.stop()
-
-        if order_weight <= 0:
-
-            st.error(
-                "Order weight must be greater than zero."
-            )
-
-            st.stop()
-
-        # ----------------------------------------------------
-        # DERIVED FEATURES
-        # ----------------------------------------------------
-
-        ratio = (
-            distance_km / service_radius_km
-        )
-
-        within_service_radius = (
-            1
-            if within_radius == "Yes"
-            else 0
-        )
-
-        calculated_distance_band = (
-            distance_band(distance_km)
-        )
-
-        calculated_amount_band = (
-            amount_band(order_amount)
-        )
-
-        calculated_amount_per_kg = (
-            order_amount / order_weight
-        )
-
-        calculated_experience_band = (
-            experience_band(
-                rider_experience
-            )
-        )
-
-        calculated_rating_band = (
-            rating_band(
-                rider_rating
-            )
-        )
-
-        calculated_time_of_day = (
-            time_of_day(
-                order_hour
-            )
-        )
-
-        calculated_peak_hour = (
-            is_peak_hour(
-                order_hour
-            )
-        )
-
-        calculated_weekend = int(
-            order_date.weekday() >= 5
-        )
-
-        calculated_month_start = int(
-            order_date.day == 1
-        )
-
-        calculated_month_end = int(
-            order_date.day
-            == (
-                order_date.replace(
-                    day=28
-                )
-                + datetime.timedelta(
-                    days=4
-                )
-            ).replace(
-                day=1
-            )
-            - datetime.timedelta(
-                days=1
-            )
-        )
-
-        # ----------------------------------------------------
-        # API PAYLOAD
-        # ----------------------------------------------------
-
-        payload = {
-
-            "city": city.strip(),
-
-            "city_tier": int(city_tier),
-
-            "customer_lat": float(
-                customer_lat
-            ),
-
-            "customer_lon": float(
-                customer_lon
-            ),
-
-            "store_id": store_id.strip(),
-
-            "store_lat": float(
-                store_lat
-            ),
-
-            "store_lon": float(
-                store_lon
-            ),
-
-            "delivery_zone": delivery_zone,
-
-            "distance_km": float(
-                distance_km
-            ),
-
-            "distance_band":
-                calculated_distance_band,
-
-            "distance_to_radius_ratio":
-                round(
-                    ratio,
-                    4,
-                ),
-
-            "service_radius_km":
-                float(
-                    service_radius_km
-                ),
-
-            "within_service_radius":
-                within_service_radius,
-
-            "item_count":
-                int(item_count),
-
-            "order_amount":
-                float(order_amount),
-
-            "order_amount_band":
-                calculated_amount_band,
-
-            "order_weight_kg":
-                float(order_weight),
-
-            "order_amount_per_kg":
-                round(
-                    calculated_amount_per_kg,
-                    4,
-                ),
-
-            "order_year":
-                int(order_date.year),
-
-            "order_month":
-                int(order_date.month),
-
-            "order_day":
-                int(order_date.day),
-
-            "order_hour":
-                int(order_hour),
-
-            "order_dayofweek":
-                int(order_date.weekday()),
-
-            "is_month_start":
-                calculated_month_start,
-
-            "is_month_end":
-                calculated_month_end,
-
-            "is_peak_hour":
-                calculated_peak_hour,
-
-            "is_weekend":
-                calculated_weekend,
-
-            "time_of_day":
-                calculated_time_of_day,
-
-            # ------------------------------------------------
-            # WEATHER PLACEHOLDERS
-            #
-            # FastAPI replaces these with LIVE OpenWeather
-            # values before prediction.
-            # ------------------------------------------------
-
-            "weather_condition": "clear",
-
-            "weather_severity": 0,
-
-            "rainfall_mm": 0.0,
-
-            "has_rain": 0,
-
-            # ------------------------------------------------
-            # TRAFFIC PLACEHOLDERS
-            #
-            # FastAPI replaces these with LIVE TomTom
-            # values before prediction.
-            # ------------------------------------------------
-
-            "traffic_index": 0.0,
-
-            "traffic_level": "low",
-
-            "road_type": road_type,
-
-            "current_rider_load":
-                float(
-                    current_rider_load
-                ),
-
-            "previous_acceptance_rate":
-                float(
-                    previous_acceptance_rate
-                ),
-
-            "rider_earnings_today":
-                float(
-                    rider_earnings_today
-                ),
-
-            "rider_experience_months":
-                float(
-                    rider_experience
-                ),
-
-            "rider_experience_band":
-                calculated_experience_band,
-
-            "rider_rating":
-                float(
-                    rider_rating
-                ),
-
-            "rider_rating_band":
-                calculated_rating_band,
-
-            "vehicle_type":
-                vehicle_type,
-
-            "current_incentive":
-                float(
-                    current_incentive
-                ),
-
-            "membership_type":
-                membership_type,
-
-            "historical_delivery_cost":
-                float(
-                    historical_delivery_cost
-                ),
-
-            "historical_travel_time":
-                float(
-                    historical_travel_time
-                ),
-
-            "demand_level":
-                demand_level,
-
-            "festival_day_flag":
-                1
-                if festival_day == "Yes"
-                else 0,
-        }
-
-        # ----------------------------------------------------
-        # API CALL
-        # ----------------------------------------------------
-
-        with st.spinner(
-            "🤖 Generating prediction using HGB-v1..."
-        ):
-
-            result = api.predict(
-                payload
-            )
-
-        st.session_state.prediction = result
-
-    except Exception as exc:
-
-        st.error(
-            "Prediction failed."
-        )
-
-        st.code(
-            str(exc)
-        )
-
-
-# ============================================================
-# RESULTS
-# ============================================================
-
-if st.session_state.get(
-    "prediction"
-):
-
-    result = st.session_state.prediction
-
-    st.markdown("---")
-
     st.markdown(
-        '<div class="section-title">'
-        "🎯 Prediction Results"
+        '<div class="brand-row">'
+        '<div class="brand-circle"></div>'
+        '<div><p class="brand-title">Zepto Smart</p>'
+        '<p class="brand-sub">Commerce AI</p></div>'
         "</div>",
         unsafe_allow_html=True,
     )
 
-    # --------------------------------------------------------
-    # MAIN RESULTS
-    # --------------------------------------------------------
+    if st.button("＋ New chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
 
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-
-        st.markdown(
-            '<div class="prediction-card">',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            '<div class="prediction-label">'
-            "💰 Delivery Charge"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f'<div class="prediction-value">'
-            f'₹{result["delivery_charge"]:.2f}'
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    with c2:
-
-        st.markdown(
-            '<div class="prediction-card">',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            '<div class="prediction-label">'
-            "⏱️ Estimated Delivery Time"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f'<div class="prediction-value">'
-            f'{result["delivery_time_minutes"]:.1f} min'
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    with c3:
-
-        probability = float(
-            result[
-                "rider_acceptance_probability"
-            ]
-        )
-
-        st.markdown(
-            '<div class="prediction-card">',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            '<div class="prediction-label">'
-            "🛵 Rider Acceptance"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f'<div class="prediction-value">'
-            f'{probability * 100:.1f}%'
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("")
-
-    if result["rider_acceptance"] == 1:
-
-        st.success(
-            "✅ Rider is predicted to ACCEPT the order."
-        )
-
+    st.markdown("#### Recent")
+    if st.session_state.messages:
+        user_turns = [
+            m["content"] for m in st.session_state.messages if m["role"] == "user"
+        ]
+        for i, turn in enumerate(user_turns[-5:][::-1]):
+            first_line = turn.strip().splitlines()[0][:28] if turn.strip() else "Prediction"
+            st.caption(f"💬 {first_line}…")
     else:
+        st.caption("No conversations yet.")
 
-        st.warning(
-            "⚠️ Rider is predicted NOT to accept the order."
-        )
-
-    # --------------------------------------------------------
-    # LIVE WEATHER
-    # --------------------------------------------------------
-
-    weather = result.get(
-        "weather",
-        {},
-    )
-
-    st.markdown(
-        '<div class="section-title">'
-        "🌤️ Live Weather Used for Prediction"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-    with st.container(border=True):
-
-        c1, c2, c3, c4 = st.columns(4)
-
-        with c1:
-
-            st.metric(
-                "Condition",
-                format_optional(
-                    weather.get(
-                        "description"
-                    )
-                ),
-            )
-
-        with c2:
-
-            temperature = weather.get(
-                "temperature_c"
-            )
-
-            st.metric(
-                "Temperature",
-                (
-                    f"{temperature:.1f} °C"
-                    if temperature is not None
-                    else "N/A"
-                ),
-            )
-
-        with c3:
-
-            humidity = weather.get(
-                "humidity_percent"
-            )
-
-            st.metric(
-                "Humidity",
-                (
-                    f"{humidity:.0f}%"
-                    if humidity is not None
-                    else "N/A"
-                ),
-            )
-
-        with c4:
-
-            rainfall = weather.get(
-                "rainfall_mm",
-                0,
-            )
-
-            st.metric(
-                "Rainfall",
-                f"{rainfall:.1f} mm",
-            )
-
+    with st.expander("⚡ Capabilities"):
         st.write(
-            f"**Location:** "
-            f"{format_optional(weather.get('location_name'))}"
+            "- Predicts delivery charge, ETA & rider acceptance\n"
+            "- Paste order features as `key: value` lines\n"
+            "- Live weather & traffic pulled server-side"
         )
 
-        st.write(
-            f"**ML Weather Category:** "
-            f"{format_optional(weather.get('weather_condition'))}"
-        )
+    with st.expander("⚙️ System Status"):
+        try:
+            health = api.health_check()
+            st.success("FastAPI Connected")
+            st.write(f"**Model:** {health.get('model_version', 'N/A')}")
+            st.write(f"**Weather:** {health.get('weather_provider', 'N/A')}")
+            st.write(f"**Traffic:** {health.get('traffic_provider', 'N/A')}")
+        except Exception as exc:
+            st.error("FastAPI is not connected.")
+            st.caption(str(exc))
 
-        st.write(
-            f"**Source:** "
-            f"`{format_optional(weather.get('source'))}`"
-        )
-
-    # --------------------------------------------------------
-    # LIVE TRAFFIC
-    # --------------------------------------------------------
-
-    traffic = result.get(
-        "traffic",
-        {},
-    )
-
-    st.markdown(
-        '<div class="section-title">'
-        "🚦 Live Traffic Used for Prediction"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-    with st.container(border=True):
-
-        c1, c2, c3, c4 = st.columns(4)
-
-        with c1:
-
-            st.metric(
-                "Traffic Level",
-                format_optional(
-                    traffic.get(
-                        "traffic_level"
-                    )
-                ),
-            )
-
-        with c2:
-
-            st.metric(
-                "Traffic Index",
-                f'{traffic.get("traffic_index", 0):.1f}',
-            )
-
-        with c3:
-
-            st.metric(
-                "Current Speed",
-                f'{traffic.get("current_speed_kmh", 0):.1f} km/h',
-            )
-
-        with c4:
-
-            st.metric(
-                "Free Flow Speed",
-                f'{traffic.get("free_flow_speed_kmh", 0):.1f} km/h',
-            )
-
-        st.write(
-            f"**Source:** "
-            f"`{format_optional(traffic.get('source'))}`"
-        )
-
-    # --------------------------------------------------------
-    # MODEL INFORMATION
-    # --------------------------------------------------------
-
-    st.markdown("")
-
-    st.info(
-        f"Model Version: **{result.get('model_version', 'HGB-v1')}** "
-        "• Live weather and traffic were obtained by FastAPI "
-        "• Prediction recorded in PostgreSQL audit."
-    )
-
-    if st.button(
-        "🔄 New Prediction",
-        use_container_width=True,
-    ):
-
-        reset_prediction()
+    if st.button("🗑 Clear current chat", use_container_width=True):
+        st.session_state.messages = []
         st.rerun()
 
 
 # ============================================================
-# FOOTER
+# HEADER (always visible)
 # ============================================================
 
-st.markdown("---")
-
-st.caption(
-    "Zepto Smart Commerce AI Platform • "
-    "HGB-v1 • Live OpenWeather • Live TomTom Traffic • PostgreSQL"
+st.markdown(
+    '<div class="brand-row">'
+    '<div class="brand-circle"></div>'
+    '<div><p class="brand-title">Welcome to Zepto Smart Commerce AI</p>'
+    '<p class="brand-sub">Delivery charge, ETA & rider-acceptance predictions</p></div>'
+    "</div>",
+    unsafe_allow_html=True,
 )
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+
+# ============================================================
+# EMPTY STATE
+# ============================================================
+
+if not st.session_state.messages:
+
+    st.markdown(
+        '<div class="welcome-wrap">'
+        '<div class="brand-circle lg"></div>'
+        '<div class="welcome-title">Start a new prediction</div>'
+        '<div class="welcome-sub">Paste your order\'s feature block below — '
+        "city, distance, order amount, rider details, weather, traffic — "
+        "and I'll return the predicted delivery charge, ETA and rider "
+        "acceptance.</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.expander("See an example feature block"):
+        st.markdown(f'<div class="example-box">{EXAMPLE_BLOCK}</div>', unsafe_allow_html=True)
+
+
+# ============================================================
+# CHAT HISTORY
+# ============================================================
+
+for message in st.session_state.messages:
+
+    avatar = "🧑" if message["role"] == "user" else "🛵"
+
+    with st.chat_message(message["role"], avatar=avatar):
+
+        if message["role"] == "user":
+            st.code(message["content"], language=None)
+        elif message["content"].get("error"):
+            st.error(message["content"]["error"])
+        else:
+            render_prediction_message(
+                message["content"]["payload"],
+                message["content"]["result"],
+            )
+
+
+# ============================================================
+# CHAT INPUT
+# ============================================================
+
+prompt = st.chat_input(
+    "Paste your order features as key: value lines, then press Enter…"
+)
+
+if prompt:
+
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    with st.spinner("🤖 Generating prediction using HGB-v1..."):
+        outcome = run_prediction(prompt)
+
+    st.session_state.messages.append({"role": "assistant", "content": outcome})
+
+    st.rerun()
