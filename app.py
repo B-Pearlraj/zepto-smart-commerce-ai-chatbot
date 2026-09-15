@@ -92,162 +92,210 @@ EXAMPLE_BLOCK = "\n".join(f"{k}: {v}" for k, v in DEFAULT_PAYLOAD.items())
 
 
 # ============================================================
-# CUSTOM CSS  —  dark chatbot theme
+# CUSTOM CSS  —  Zepto-pattern theme
+# (signature Zepto violet/purple + white, bold rounded UI,
+#  green for positive states, peach/yellow for highlights —
+#  matching Zepto's own light, high-energy quick-commerce look)
 # ============================================================
 
+ZEPTO_PURPLE = "#8B2FF8"
+ZEPTO_PURPLE_DARK = "#6E1FD1"
+ZEPTO_INK = "#161119"
+ZEPTO_GREEN = "#0CA750"
+ZEPTO_PEACH = "#FFB74D"
+
 st.markdown(
-    """
+    f"""
     <style>
 
-    #MainMenu, footer, header {visibility: hidden;}
+    #MainMenu, footer, header {{visibility: hidden;}}
 
-    .stApp {
-        background: radial-gradient(circle at 20% 0%, #10192b 0%, #060a13 55%, #04070d 100%);
-        color: #e7ecf5;
-    }
+    .stApp {{
+        background: #FAF8FD;
+        color: {ZEPTO_INK};
+        font-family: "Poppins", "Segoe UI", sans-serif;
+    }}
 
-    section[data-testid="stSidebar"] {
-        background: #0a1120;
-        border-right: 1px solid #1c2740;
-    }
+    h1, h2, h3, .brand-title, .welcome-title {{
+        font-family: "Poppins", "Segoe UI", sans-serif;
+        letter-spacing: -0.01em;
+    }}
 
-    section[data-testid="stSidebar"] .stButton > button {
+    section[data-testid="stSidebar"] {{
+        background: #FFFFFF;
+        border-right: 1px solid #EFE6FC;
+    }}
+
+    section[data-testid="stSidebar"] .stButton > button {{
         width: 100%;
-        background: #101c33;
-        color: #dbe4f5;
-        border: 1px solid #22314f;
-        border-radius: 10px;
-        font-weight: 600;
-        text-align: left;
-        padding: 10px 14px;
-    }
+        background: {ZEPTO_PURPLE};
+        color: #FFFFFF;
+        border: none;
+        border-radius: 999px;
+        font-weight: 700;
+        text-align: center;
+        padding: 10px 16px;
+        box-shadow: 0 4px 14px rgba(139, 47, 248, 0.28);
+    }}
 
-    section[data-testid="stSidebar"] .stButton > button:hover {
-        border-color: #7b5cff;
-        color: #ffffff;
-    }
+    section[data-testid="stSidebar"] .stButton > button:hover {{
+        background: {ZEPTO_PURPLE_DARK};
+        color: #FFFFFF;
+    }}
 
-    .brand-row {
+    section[data-testid="stSidebar"] div[data-testid="stExpander"] {{
+        border: 1px solid #EFE6FC;
+        border-radius: 12px;
+        background: #FDFBFF;
+    }}
+
+    .brand-row {{
         display: flex;
         align-items: center;
         gap: 12px;
         margin-bottom: 4px;
-    }
+    }}
 
-    .brand-circle {
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 35% 30%, #ff7ad9, #b33bf0 55%, #5c1fb0 100%);
-        box-shadow: 0 0 18px rgba(179, 59, 240, 0.45);
+    .brand-circle {{
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        background: {ZEPTO_PURPLE};
+        box-shadow: 0 4px 14px rgba(139, 47, 248, 0.35);
         flex-shrink: 0;
-    }
-
-    .brand-circle.lg {
-        width: 78px;
-        height: 78px;
-        margin: 0 auto 18px auto;
-    }
-
-    .brand-title {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-size: 18px;
-        font-weight: 750;
-        color: #f2f5fb;
-        margin: 0;
-    }
+    }}
 
-    .brand-sub {
+    .brand-circle.lg {{
+        width: 84px;
+        height: 84px;
+        border-radius: 24px;
+        margin: 0 auto 18px auto;
+        font-size: 40px;
+    }}
+
+    .brand-title {{
+        font-size: 19px;
+        font-weight: 800;
+        color: {ZEPTO_INK};
+        margin: 0;
+    }}
+
+    .brand-sub {{
         font-size: 12.5px;
-        color: #8a97b3;
+        color: #7A6E88;
         margin: 0;
-    }
+    }}
 
-    .welcome-wrap {
+    .welcome-wrap {{
         text-align: center;
         margin-top: 7vh;
-    }
+    }}
 
-    .welcome-title {
-        font-size: 26px;
-        font-weight: 750;
-        color: #f2f5fb;
+    .welcome-title {{
+        font-size: 28px;
+        font-weight: 800;
+        color: {ZEPTO_INK};
         margin-bottom: 6px;
-    }
+    }}
 
-    .welcome-sub {
+    .welcome-sub {{
         font-size: 15px;
-        color: #8a97b3;
+        color: #7A6E88;
         max-width: 580px;
         margin: 0 auto;
-    }
+    }}
 
-    .example-box {
-        background: #0d1626;
-        border: 1px solid #1e2b47;
-        border-radius: 12px;
+    .welcome-sub code {{
+        background: #F1E6FE;
+        color: {ZEPTO_PURPLE_DARK};
+        padding: 1px 6px;
+        border-radius: 6px;
+    }}
+
+    .example-box {{
+        background: #FFFFFF;
+        border: 1px solid #EFE6FC;
+        border-radius: 14px;
         padding: 14px 16px;
         font-family: "SFMono-Regular", Consolas, monospace;
         font-size: 12.5px;
-        color: #93a2c2;
+        color: #56495F;
         max-height: 220px;
         overflow-y: auto;
         text-align: left;
         margin-top: 22px;
-    }
+        box-shadow: 0 2px 10px rgba(139, 47, 248, 0.06);
+    }}
 
-    div[data-testid="stChatMessage"] {
-        background: #0d1626;
-        border: 1px solid #1c2740;
+    div[data-testid="stChatMessage"] {{
+        background: #FFFFFF;
+        border: 1px solid #EFE6FC;
+        border-radius: 16px;
+        padding: 6px 8px;
+        box-shadow: 0 2px 10px rgba(139, 47, 248, 0.05);
+    }}
+
+    .result-card {{
+        background: #FBF7FF;
+        border: 1px solid #EFE6FC;
         border-radius: 14px;
-        padding: 4px 6px;
-    }
-
-    .result-card {
-        background: #101c33;
-        border: 1px solid #22314f;
-        border-radius: 12px;
         padding: 14px 16px;
         text-align: center;
-    }
+    }}
 
-    .result-label {
-        color: #8a97b3;
+    .result-label {{
+        color: #7A6E88;
         font-size: 12.5px;
+        font-weight: 600;
         margin-bottom: 4px;
-    }
+    }}
 
-    .result-value {
-        color: #f2f5fb;
-        font-size: 21px;
-        font-weight: 750;
-    }
+    .result-value {{
+        color: {ZEPTO_PURPLE_DARK};
+        font-size: 22px;
+        font-weight: 800;
+    }}
 
-    .pill {
+    .pill {{
         display: inline-block;
-        padding: 3px 10px;
+        padding: 4px 12px;
         border-radius: 999px;
-        font-size: 12px;
-        font-weight: 650;
-    }
-
-    .pill-ok { background: rgba(22,199,154,0.15); color: #16c79a; }
-    .pill-warn { background: rgba(255,176,32,0.15); color: #ffb020; }
-
-    .diff-row {
         font-size: 12.5px;
-        color: #c3cde3;
+        font-weight: 700;
+    }}
+
+    .pill-ok {{ background: rgba(12, 167, 80, 0.12); color: {ZEPTO_GREEN}; }}
+    .pill-warn {{ background: rgba(255, 183, 77, 0.18); color: #B9720A; }}
+
+    .diff-row {{
+        font-size: 12.5px;
+        color: #56495F;
         font-family: "SFMono-Regular", Consolas, monospace;
         margin-bottom: 2px;
-    }
+    }}
 
-    .diff-key { color: #7fb3ff; }
-    .diff-old { color: #7d879e; text-decoration: line-through; }
-    .diff-new { color: #16c79a; font-weight: 650; }
+    .diff-key {{ color: {ZEPTO_PURPLE_DARK}; font-weight: 650; }}
+    .diff-old {{ color: #A79BB3; text-decoration: line-through; }}
+    .diff-new {{ color: {ZEPTO_GREEN}; font-weight: 700; }}
 
-    div[data-testid="stChatInput"] textarea {
-        background: #0d1626 !important;
-        color: #e7ecf5 !important;
-    }
+    div[data-testid="stChatInput"] {{
+        border: 1px solid #EFE6FC;
+        border-radius: 999px;
+    }}
+
+    div[data-testid="stChatInput"] textarea {{
+        background: #FFFFFF !important;
+        color: {ZEPTO_INK} !important;
+    }}
+
+    .stButton > button[kind="primary"], button[data-testid="stChatInputSubmitButton"] {{
+        background: {ZEPTO_PURPLE} !important;
+        border-color: {ZEPTO_PURPLE} !important;
+    }}
 
     </style>
     """,
@@ -486,7 +534,7 @@ with st.sidebar:
 
     st.markdown(
         '<div class="brand-row">'
-        '<div class="brand-circle"></div>'
+        '<div class="brand-circle">⚡</div>'
         '<div><p class="brand-title">Zepto Smart</p>'
         '<p class="brand-sub">Commerce AI</p></div>'
         "</div>",
@@ -540,7 +588,7 @@ with st.sidebar:
 
 st.markdown(
     '<div class="brand-row">'
-    '<div class="brand-circle"></div>'
+    '<div class="brand-circle">⚡</div>'
     '<div><p class="brand-title">Welcome to Zepto Smart Commerce AI</p>'
     '<p class="brand-sub">Delivery charge, ETA & rider-acceptance predictions</p></div>'
     "</div>",
@@ -558,7 +606,7 @@ if not st.session_state.messages:
 
     st.markdown(
         '<div class="welcome-wrap">'
-        '<div class="brand-circle lg"></div>'
+        '<div class="brand-circle lg">⚡</div>'
         '<div class="welcome-title">Start a new prediction</div>'
         '<div class="welcome-sub">Paste your order\'s full feature block once. '
         "After that, just tell me what changed — e.g. "
@@ -578,7 +626,7 @@ if not st.session_state.messages:
 
 for message in st.session_state.messages:
 
-    avatar = "🧑" if message["role"] == "user" else "🛵"
+    avatar = "🧑" if message["role"] == "user" else "⚡"
 
     with st.chat_message(message["role"], avatar=avatar):
 
