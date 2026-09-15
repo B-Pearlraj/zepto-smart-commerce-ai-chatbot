@@ -613,10 +613,7 @@ with st.sidebar:
         reset_chat()
         st.rerun()
 
-st.markdown(
-    "<div style='text-align:center;'>Created by <b>Pearlraj</b></div>",
-    unsafe_allow_html=True
-)
+
 # ============================================================
 # HEADER (always visible)
 # ============================================================
@@ -692,4 +689,7 @@ if prompt:
 
     st.rerun()
 
-
+st.markdown(
+    "<div style='text-align:center;'>Created by <b>Pearlraj</b></div>",
+    unsafe_allow_html=True
+)
