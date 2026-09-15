@@ -1,4 +1,3 @@
-import datetime
 import os
 import re
 
@@ -32,7 +31,9 @@ api = APIClient(API_BASE_URL)
 
 
 # ============================================================
-# FIELD DEFAULTS  (used to fill in anything the user omits)
+# FIELD DEFAULTS  (the starting feature set — every field the
+# model needs. Chat edits only ever touch a subset of these;
+# everything else carries forward from the last turn.)
 # ============================================================
 
 DEFAULT_PAYLOAD = {
@@ -87,9 +88,7 @@ DEFAULT_PAYLOAD = {
     "festival_day_flag": 0,
 }
 
-EXAMPLE_BLOCK = "\n".join(
-    f"{k}: {v}" for k, v in DEFAULT_PAYLOAD.items()
-)
+EXAMPLE_BLOCK = "\n".join(f"{k}: {v}" for k, v in DEFAULT_PAYLOAD.items())
 
 
 # ============================================================
@@ -124,7 +123,7 @@ st.markdown(
     }
 
     section[data-testid="stSidebar"] .stButton > button:hover {
-        border-color: #6d5bd0;
+        border-color: #7b5cff;
         color: #ffffff;
     }
 
@@ -139,13 +138,14 @@ st.markdown(
         width: 34px;
         height: 34px;
         border-radius: 50%;
-        background: conic-gradient(from 180deg, #16c79a, #2696ff, #7b5cff, #16c79a);
+        background: radial-gradient(circle at 35% 30%, #ff7ad9, #b33bf0 55%, #5c1fb0 100%);
+        box-shadow: 0 0 18px rgba(179, 59, 240, 0.45);
         flex-shrink: 0;
     }
 
     .brand-circle.lg {
-        width: 76px;
-        height: 76px;
+        width: 78px;
+        height: 78px;
         margin: 0 auto 18px auto;
     }
 
@@ -164,7 +164,7 @@ st.markdown(
 
     .welcome-wrap {
         text-align: center;
-        margin-top: 8vh;
+        margin-top: 7vh;
     }
 
     .welcome-title {
@@ -177,7 +177,7 @@ st.markdown(
     .welcome-sub {
         font-size: 15px;
         color: #8a97b3;
-        max-width: 560px;
+        max-width: 580px;
         margin: 0 auto;
     }
 
@@ -189,7 +189,7 @@ st.markdown(
         font-family: "SFMono-Regular", Consolas, monospace;
         font-size: 12.5px;
         color: #93a2c2;
-        max-height: 210px;
+        max-height: 220px;
         overflow-y: auto;
         text-align: left;
         margin-top: 22px;
@@ -233,6 +233,17 @@ st.markdown(
     .pill-ok { background: rgba(22,199,154,0.15); color: #16c79a; }
     .pill-warn { background: rgba(255,176,32,0.15); color: #ffb020; }
 
+    .diff-row {
+        font-size: 12.5px;
+        color: #c3cde3;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        margin-bottom: 2px;
+    }
+
+    .diff-key { color: #7fb3ff; }
+    .diff-old { color: #7d879e; text-decoration: line-through; }
+    .diff-new { color: #16c79a; font-weight: 650; }
+
     div[data-testid="stChatInput"] textarea {
         background: #0d1626 !important;
         color: #e7ecf5 !important;
@@ -245,7 +256,7 @@ st.markdown(
 
 
 # ============================================================
-# HELPER FUNCTIONS
+# PARSING HELPERS
 # ============================================================
 
 def coerce_value(raw: str):
@@ -259,39 +270,112 @@ def coerce_value(raw: str):
 
 
 def parse_feature_block(text: str) -> dict:
+    """
+    Accepts either a full multi-line feature block or a short
+    chat-style edit such as:
+        distance_km: 5, order_amount: 900
+        rider_rating = 3.2
+    Only known feature keys are extracted; free-text is ignored.
+    """
+
     parsed = {}
+
+    # split on newlines AND commas so "a: 1, b: 2" on one line also works
+    fragments = []
     for line in text.strip().splitlines():
-        line = line.strip()
-        if not line or ":" not in line:
+        fragments.extend(line.split(","))
+
+    for fragment in fragments:
+        fragment = fragment.strip()
+        if not fragment:
             continue
-        key, _, value = line.partition(":")
-        key = key.strip()
+
+        match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*(.+)$", fragment)
+        if not match:
+            continue
+
+        key, value = match.group(1).strip(), match.group(2).strip()
         if key in DEFAULT_PAYLOAD:
             parsed[key] = coerce_value(value)
+
     return parsed
-
-
-def build_payload(parsed: dict) -> dict:
-    payload = dict(DEFAULT_PAYLOAD)
-    payload.update(parsed)
-    return payload
 
 
 def format_optional(value):
     return "N/A" if value is None else str(value)
 
 
-def render_prediction_message(payload: dict, result: dict):
-    """Renders the assistant's chat-bubble style prediction output."""
+# ============================================================
+# PREDICTION FLOW
+# ============================================================
 
-    missing = [k for k in DEFAULT_PAYLOAD if k not in payload]
+def run_prediction(user_text: str):
+    """
+    Merges any parsed fields onto the current session feature
+    state, calls the API with the FULL merged payload, then
+    updates the session state so the next message only needs
+    to mention what's changing.
+    """
 
-    st.markdown(
-        f"Here's the prediction for **{payload.get('city', 'the order')}** "
-        f"(store `{payload.get('store_id', 'N/A')}`), based on the "
-        f"{len(payload) - len(missing) if missing else len(DEFAULT_PAYLOAD)} "
-        "features you provided:"
-    )
+    parsed = parse_feature_block(user_text)
+
+    if not parsed:
+        return {
+            "error": (
+                "I couldn't find any `key: value` fields in that message. "
+                "Send a full feature block to start, or just the fields "
+                "you want to change, e.g.\n\n`distance_km: 5, order_amount: 900`"
+            )
+        }
+
+    previous_payload = st.session_state.current_payload
+    changed = {
+        key: (previous_payload.get(key), value)
+        for key, value in parsed.items()
+        if previous_payload.get(key) != value
+    }
+
+    merged_payload = dict(previous_payload)
+    merged_payload.update(parsed)
+
+    try:
+        result = api.predict(merged_payload)
+    except Exception as exc:
+        return {"error": f"Prediction failed: {exc}"}
+
+    st.session_state.current_payload = merged_payload
+
+    return {
+        "payload": merged_payload,
+        "changed": changed,
+        "is_first": previous_payload == DEFAULT_PAYLOAD and len(parsed) > 5,
+        "result": result,
+    }
+
+
+def render_prediction_message(content: dict):
+
+    payload = content["payload"]
+    result = content["result"]
+    changed = content.get("changed", {})
+
+    if changed and not content.get("is_first"):
+        st.markdown("**Updated fields:**")
+        for key, (old, new) in changed.items():
+            st.markdown(
+                f'<div class="diff-row"><span class="diff-key">{key}</span>: '
+                f'<span class="diff-old">{old}</span> → '
+                f'<span class="diff-new">{new}</span></div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown("Everything else was kept from the last prediction.")
+    else:
+        st.markdown(
+            f"Got it — using this feature set for **{payload.get('city', 'the order')}** "
+            f"(store `{payload.get('store_id', 'N/A')}`)."
+        )
+
+    st.markdown("")
 
     c1, c2, c3 = st.columns(3)
 
@@ -369,42 +453,13 @@ def render_prediction_message(payload: dict, result: dict):
         with tc3:
             st.metric("Current Speed", f"{traffic.get('current_speed_kmh', 0):.1f} km/h")
 
-    if missing:
-        st.caption(
-            "ℹ️ Defaulted "
-            + ", ".join(f"`{m}`" for m in missing)
-            + " since they weren't in your message."
-        )
+    with st.expander("📋 Full feature set used"):
+        st.json(payload)
 
     st.caption(
         f"Model: **{result.get('model_version', 'HGB-v1')}** • "
         "Live weather/traffic applied server-side • logged to PostgreSQL."
     )
-
-
-def run_prediction(user_text: str):
-    """Parses the pasted feature block, calls the API, and returns a
-    dict describing what to render for the assistant turn."""
-
-    parsed = parse_feature_block(user_text)
-
-    if not parsed:
-        return {
-            "error": (
-                "I couldn't find any `key: value` feature lines in that "
-                "message. Paste your order features one per line, e.g.\n\n"
-                "```\ncity: Chennai\ndistance_km: 1.8\norder_amount: 450.0\n...\n```"
-            )
-        }
-
-    payload = build_payload(parsed)
-
-    try:
-        result = api.predict(payload)
-    except Exception as exc:
-        return {"error": f"Prediction failed: {exc}"}
-
-    return {"payload": payload, "result": result}
 
 
 # ============================================================
@@ -413,6 +468,14 @@ def run_prediction(user_text: str):
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "current_payload" not in st.session_state:
+    st.session_state.current_payload = dict(DEFAULT_PAYLOAD)
+
+
+def reset_chat():
+    st.session_state.messages = []
+    st.session_state.current_payload = dict(DEFAULT_PAYLOAD)
 
 
 # ============================================================
@@ -431,15 +494,13 @@ with st.sidebar:
     )
 
     if st.button("＋ New chat", use_container_width=True):
-        st.session_state.messages = []
+        reset_chat()
         st.rerun()
 
     st.markdown("#### Recent")
     if st.session_state.messages:
-        user_turns = [
-            m["content"] for m in st.session_state.messages if m["role"] == "user"
-        ]
-        for i, turn in enumerate(user_turns[-5:][::-1]):
+        user_turns = [m["content"] for m in st.session_state.messages if m["role"] == "user"]
+        for turn in user_turns[-5:][::-1]:
             first_line = turn.strip().splitlines()[0][:28] if turn.strip() else "Prediction"
             st.caption(f"💬 {first_line}…")
     else:
@@ -448,9 +509,14 @@ with st.sidebar:
     with st.expander("⚡ Capabilities"):
         st.write(
             "- Predicts delivery charge, ETA & rider acceptance\n"
-            "- Paste order features as `key: value` lines\n"
+            "- Paste a full feature block to start\n"
+            "- Then just mention what changed — e.g. `distance_km: 5` — "
+            "and everything else carries forward\n"
             "- Live weather & traffic pulled server-side"
         )
+
+    with st.expander("📋 Current feature set"):
+        st.json(st.session_state.current_payload)
 
     with st.expander("⚙️ System Status"):
         try:
@@ -464,7 +530,7 @@ with st.sidebar:
             st.caption(str(exc))
 
     if st.button("🗑 Clear current chat", use_container_width=True):
-        st.session_state.messages = []
+        reset_chat()
         st.rerun()
 
 
@@ -494,10 +560,10 @@ if not st.session_state.messages:
         '<div class="welcome-wrap">'
         '<div class="brand-circle lg"></div>'
         '<div class="welcome-title">Start a new prediction</div>'
-        '<div class="welcome-sub">Paste your order\'s feature block below — '
-        "city, distance, order amount, rider details, weather, traffic — "
-        "and I'll return the predicted delivery charge, ETA and rider "
-        "acceptance.</div>"
+        '<div class="welcome-sub">Paste your order\'s full feature block once. '
+        "After that, just tell me what changed — e.g. "
+        "<code>distance_km: 5, order_amount: 900</code> — and I'll re-run the "
+        "prediction using that update plus everything else from before.</div>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -521,10 +587,7 @@ for message in st.session_state.messages:
         elif message["content"].get("error"):
             st.error(message["content"]["error"])
         else:
-            render_prediction_message(
-                message["content"]["payload"],
-                message["content"]["result"],
-            )
+            render_prediction_message(message["content"])
 
 
 # ============================================================
@@ -532,7 +595,7 @@ for message in st.session_state.messages:
 # ============================================================
 
 prompt = st.chat_input(
-    "Paste your order features as key: value lines, then press Enter…"
+    "Paste a feature block, or just say what changed (e.g. distance_km: 5)…"
 )
 
 if prompt:
