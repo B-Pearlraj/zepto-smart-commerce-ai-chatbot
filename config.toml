@@ -1,0 +1,10 @@
+[theme]
+base = "light"
+primaryColor = "#8B2FF8"
+backgroundColor = "#FAF8FD"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#161119"
+font = "sans serif"
+
+[client]
+showSidebarNavigation = true
